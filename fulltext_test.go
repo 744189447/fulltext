@@ -52,17 +52,17 @@ func TestFulltextEn(t *testing.T) {
 		log.Printf("id: %s -- score: %f", doc.ID, doc.Score)
 	}
 
-	err = fulltext.RemoveDocs(index, "document_0", "document_1", "document_2", "document_3", "document_4", "document_6")
+	err = fulltext.DelDocs(index, "document_0", "document_1", "document_2", "document_3", "document_4", "document_6")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = fulltext.RemoveIndex(index)
+	err = fulltext.DelIndex(index)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = fulltext.RemoveDB()
+	err = fulltext.DelDB()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestFulltextCh(t *testing.T) {
 		log.Printf("id: %s -- score: %f", doc.ID, doc.Score)
 	}
 
-	err = fulltext.RemoveDB()
+	err = fulltext.DelDB()
 	if err != nil {
 		log.Fatal(err)
 	}

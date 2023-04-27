@@ -214,3 +214,38 @@ func (fulltext *Fulltext) removeMeta(i string, tf map[string]map[string]uint32, 
 
 	return nil
 }
+
+func (fulltext *Fulltext) removeIndex(i string) error {
+	key := []byte(fmt.Sprintf("%s:%s:", indexKey, i))
+
+	batch := new(leveldb.Batch)
+	var count int
+	iter := fulltext.db.NewIterator(util.BytesPrefix(key), nil)
+	for iter.Next() {
+		if count == 20000 {
+			err := fulltext.db.Write(batch, nil)
+			if err != nil {
+				return err
+			}
+			batch.Reset()
+			count = 0
+		}
+		batch.Delete(iter.Key())
+		count++
+	}
+
+	iter.Release()
+	err := iter.Error()
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		err = fulltext.db.Write(batch, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

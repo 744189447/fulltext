@@ -76,9 +76,6 @@ func (fulltext *Fulltext) Search(query *Query) (*Hits, error) {
 		match             []Doc
 		mustTF, mustNotTF []map[string]uint32
 		tokensTFIDF       []tokenTFIDF
-		mean              float32
-		ts                uint64
-		ds                uint32
 	)
 
 	if query == nil {
@@ -212,40 +209,9 @@ func (fulltext *Fulltext) Search(query *Query) (*Hits, error) {
 		}
 	}
 
-	ts, err = fulltext.ts(query.index)
+	scores, err = fulltext.score(query.index, tokensTFIDF)
 	if err != nil {
 		return nil, err
-	}
-
-	ds, err = fulltext.ds(query.index)
-	if err != nil {
-		return nil, err
-	}
-
-	if ds == 0 {
-		mean = 0
-	} else {
-		mean = float32(float64(ts) / float64(ds))
-	}
-
-	scores = make(map[string]float32)
-
-	for _, tfidf := range tokensTFIDF {
-		if len(tfidf.tokenTF) != 0 {
-
-			idf := float32(math.Log(float64(1 + (float32(ds)-float32(tfidf.tokenIDF)+0.5)/(float32(tfidf.tokenIDF)+0.5))))
-
-			for id, tfVal := range tfidf.tokenTF {
-
-				tf := (float32(tfVal) * (fulltext.k1 + 1)) / (float32(tfVal) + fulltext.k1*(1-fulltext.b+fulltext.b*(float32(ds)/mean)))
-
-				if _, exist := scores[id]; !exist {
-					scores[id] = tf * idf
-				} else {
-					scores[id] += tf * idf
-				}
-			}
-		}
 	}
 
 	if len(scores) == 0 {
@@ -285,4 +251,43 @@ final:
 	hits.Took = int(time.Now().Sub(start).Milliseconds())
 
 	return hits, nil
+}
+
+func (fulltext *Fulltext) score(i string, tokensTFIDF []tokenTFIDF) (map[string]float32, error) {
+	ts, err := fulltext.ts(i)
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := fulltext.ds(i)
+	if err != nil {
+		return nil, err
+	}
+
+	var mean float32
+	if ds != 0 {
+		mean = float32(float64(ts) / float64(ds))
+	}
+
+	scores := make(map[string]float32)
+
+	for _, tfidf := range tokensTFIDF {
+		if len(tfidf.tokenTF) != 0 {
+
+			idf := float32(math.Log(float64(1 + (float32(ds)-float32(tfidf.tokenIDF)+0.5)/(float32(tfidf.tokenIDF)+0.5))))
+
+			for id, tfVal := range tfidf.tokenTF {
+
+				tf := (float32(tfVal) * (fulltext.k1 + 1)) / (float32(tfVal) + fulltext.k1*(1-fulltext.b+fulltext.b*(float32(ds)/mean)))
+
+				if _, exist := scores[id]; !exist {
+					scores[id] = tf * idf
+				} else {
+					scores[id] += tf * idf
+				}
+			}
+		}
+	}
+
+	return scores, nil
 }

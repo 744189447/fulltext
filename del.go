@@ -3,10 +3,7 @@ package fulltext
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/nextzhou/workpool"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
 	"os"
 	"sync"
 )
@@ -17,51 +14,20 @@ type docT struct {
 	len uint32
 }
 
-func (fulltext *Fulltext) RemoveDB() error {
+func (fulltext *Fulltext) DelDB() error {
 	return os.RemoveAll(fulltext.dbPath)
 }
 
-func (fulltext *Fulltext) RemoveIndex(index string) error {
-	key := []byte(fmt.Sprintf("%s:%s:", indexKey, index))
-
-	batch := new(leveldb.Batch)
-	var count int
-	iter := fulltext.db.NewIterator(util.BytesPrefix(key), nil)
-	for iter.Next() {
-		if count == 20000 {
-			err := fulltext.db.Write(batch, nil)
-			if err != nil {
-				return err
-			}
-			batch.Reset()
-			count = 0
-		}
-		batch.Delete(iter.Key())
-		count++
-	}
-
-	iter.Release()
-	err := iter.Error()
-	if err != nil {
-		return err
-	}
-
-	if count > 0 {
-		err = fulltext.db.Write(batch, nil)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+func (fulltext *Fulltext) DelIndex(index string) error {
+	return fulltext.removeIndex(index)
 }
 
-func (fulltext *Fulltext) RemoveDocs(index string, docsID ...string) error {
+func (fulltext *Fulltext) DelDocs(index string, docsID ...string) error {
 	l := len(docsID)
 	if l == 0 {
 		return nil
 	} else if l > 1000 {
-		return errors.New("fulltext/remove: too much docs")
+		return errors.New("fulltext/del: too much docs")
 	}
 
 	docsT := make([]docT, 0, l)
